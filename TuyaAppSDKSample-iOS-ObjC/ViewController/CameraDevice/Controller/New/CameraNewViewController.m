@@ -23,6 +23,8 @@
 #import "UIButton+Extensions.h"
 #import "UIViewController+InterfaceOrientations.h"
 
+#import <AVKit/AVKit.h>
+
 #import "CameraDeviceManager.h"
 #import "CameraLoadingButton.h"
 
@@ -58,8 +60,9 @@
 #define kControlCloud       @"Cloud"
 #define kControlMessage     @"message"
 #define kControlCloudDebug       @"CloudDebug"
+#define kControlPiP         @"PIP"
 
-@interface CameraNewViewController ()<CameraBottomSwitchViewDelegate, ThingSmartCameraDelegate, CameraControlNewViewDelegate, ThingSmartCameraDPObserver, UIScrollViewDelegate>
+@interface CameraNewViewController ()<CameraBottomSwitchViewDelegate, ThingSmartCameraDelegate, CameraControlNewViewDelegate, ThingSmartCameraDPObserver, UIScrollViewDelegate, AVPictureInPictureControllerDelegate>
 
 @property (nonatomic, strong) UIView *videoContainer;
 
@@ -100,14 +103,19 @@
 
 @property (nonatomic, assign, getter=isFullScreen) BOOL fullScreen;
 
+@property (nonatomic, strong) AVSampleBufferDisplayLayer *videoLayer;
+@property (nonatomic, strong) AVPlayerLayer *playerLayer;
+@property (nonatomic, strong) AVPictureInPictureController *pipController;
+@property (weak, nonatomic) IBOutlet UIImageView *imageView;
+
 @end
 
 @implementation CameraNewViewController
 
 - (void)dealloc {
     NSLog(@"%s", __func__);
-    [self stopPreview];
-    [self.cameraDevice removeDelegate:self];
+//    [self stopPreview];
+//    [self.cameraDevice removeDelegate:self];
 }
 
 - (instancetype)initWithDeviceId:(NSString *)devId {
@@ -146,7 +154,7 @@
     [self.operationToolbar addSubview:self.hdButton];
     [self.operationToolbar addSubview:self.toolbarFoldingButton];
     [self.operationToolbar addSubview:self.fullScreenButton];
-
+    
     [self.view addSubview:self.indicatorView];
     [self.view addSubview:self.stateLabel];
     [self.view addSubview:self.retryButton];
@@ -164,14 +172,17 @@
     // Playback、Cloud Storage、Message, these buttons can be available after camera is connected.
     [self.retryButton addTarget:self action:@selector(retryAction) forControlEvents:UIControlEventTouchUpInside];
     [self.soundButton addTarget:self action:@selector(soundActionClicked:) forControlEvents:UIControlEventTouchUpInside];
-    [self.hdButton addTarget:self action:@selector(hdActionClicked:) forControlEvents:UIControlEventTouchUpInside];
+    [self.hdButton addTarget:self action:@selector(startPIP) forControlEvents:UIControlEventTouchUpInside];
     [self.toolbarFoldingButton addTarget:self action:@selector(toolbarFoldingButtonClicked:) forControlEvents:UIControlEventTouchUpInside];
     [self.fullScreenButton addTarget:self action:@selector(fullScreenButtonClicked:) forControlEvents:UIControlEventTouchUpInside];
     [self.backPageButton addTarget:self action:@selector(backPageButtonClicked:) forControlEvents:UIControlEventTouchUpInside];
-
+    
     [self refreshControlViewDatas];
     
     [self reloadAllSubviewsLayout];
+    
+    [self setupPlayer];
+    [self setupPip];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -198,7 +209,7 @@
 
 - (void)viewDidDisappear:(BOOL)animated {
     [super viewDidDisappear:animated];
-    [self stopPreview];
+//    [self stopPreview];
 }
 
 - (BOOL)shouldAutorotate {
@@ -218,14 +229,14 @@
 
 - (void)applicationDidEnterBackgroundNotification:(NSNotification *)notification {
     if (tp_topMostViewController() == self) {
-        [self stopPreview];
+//        [self stopPreview];
         [super applicationDidEnterBackgroundNotification:notification];
     }
 }
 
 - (void)applicationWillEnterForegroundNotification:(NSNotification *)notification {
     if (tp_topMostViewController() == self) {
-        [self retryAction];
+//        [self retryAction];
         [super applicationWillEnterForegroundNotification:notification];
     }
 }
@@ -235,7 +246,7 @@
     self.bodyScrollView.hidden = self.fullScreen;
     self.navigationController.navigationBar.hidden = self.fullScreen;
     self.operationToolbar.hidden = self.fullScreen;
-
+    
     self.backPageButton.hidden = !self.fullScreen;
     if (self.fullScreen) {
         self.backPageButton.frame = CGRectMake(IsIphoneX ? 24 : 12, 10, 44, 44);
@@ -248,16 +259,16 @@
         }
         CGFloat videoContainerBottom = self.videoContainer.bottom;
         CGFloat videoContainerWidth = self.videoContainer.width;
-
+        
         CGPoint indicatorViewCenter = self.videoContainer.center;
         indicatorViewCenter.y -= 20;
         self.indicatorView.center = indicatorViewCenter;
-                
+        
         self.stateLabel.frame = CGRectMake(0, self.indicatorView.bottom + 8, videoContainerWidth, 20);
-
+        
         self.retryButton.frame = CGRectMake(0, 0, videoContainerWidth, 40);
         self.retryButton.center = self.videoContainer.center;
-               
+        
         self.operationToolbar.frame = CGRectMake(0, videoContainerBottom - 50, videoContainerWidth, 50);
     } else {
         CGFloat videoContainerHeight = VideoViewHeight;
@@ -272,19 +283,19 @@
         }
         CGFloat videoContainerBottom = self.videoContainer.bottom;
         CGFloat videoContainerWidth = self.videoContainer.width;
-
+        
         CGPoint indicatorViewCenter = self.videoContainer.center;
         indicatorViewCenter.y -= 20;
         self.indicatorView.center = indicatorViewCenter;
-                
+        
         self.stateLabel.frame = CGRectMake(0, self.indicatorView.bottom + 8, videoContainerWidth, 20);
-
+        
         self.retryButton.frame = CGRectMake(0, 0, videoContainerWidth, 40);
         self.retryButton.center = self.videoContainer.center;
-               
+        
         
         self.operationToolbar.frame = CGRectMake(0, videoContainerBottom - 50, videoContainerWidth, 50);
-
+        
         CGFloat bottomSwitchViewHeight = IsIphoneX ? IphoneXSafeBottomMargin + BottomSwitchViewHeight : BottomSwitchViewHeight;
         CGFloat bodyScrollViewHeight = FullScreenVideoViewWidth - videoContainerBottom - bottomSwitchViewHeight;
         self.bodyScrollView.frame = CGRectMake(0, videoContainerBottom, videoContainerWidth, bodyScrollViewHeight);
@@ -458,7 +469,7 @@
             }
         }];
     } else {
-
+        
     }
 }
 
@@ -518,6 +529,10 @@
         CameraMessageViewController *vc = [CameraMessageViewController new];
         vc.devId = self.devId;
         [self.navigationController pushViewController:vc animated:YES];
+    }
+    if ([identifier isEqualToString:kControlPiP]) {
+        [self.pipController startPictureInPicture];
+        return;
     }
     if ([identifier isEqualToString:kControlCloudDebug]) {
 #if __has_include(<ThingCloudStorageDebugger/ThingCloudStorageDebugger.h>)
@@ -661,7 +676,7 @@
     outlineProperty.rgb = @(0x4200c8);
     outlineProperty.shape = CameraDeviceOutlineShapeStyleFull;
     outlineProperty.brushWidth = CameraDeviceOutlineWidthWide;
-
+    
     CameraDeviceOutlineFlashFps *flashFps = [[CameraDeviceOutlineFlashFps alloc] init];
     flashFps.drawKeepFrames = CameraDeviceOutlineFlashFast;
     flashFps.stopKeepFrames = CameraDeviceOutlineFlashFast;
@@ -926,6 +941,115 @@
         _retryButton.hidden = YES;
     }
     return _retryButton;
+}
+
+- (void)setupPlayer {
+  self.playerLayer = [AVPlayerLayer playerLayerWithPlayer:nil];
+      self.playerLayer.frame = self.videoContainer.bounds;
+//      self.playerLayer.frame = CGRectMake(0, 0, self.renderView.bounds.size.width, self.renderView.bounds.size.width * 0.54);
+      self.playerLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
+
+      NSURL *mp4Video = [[NSBundle mainBundle] URLForResource:@"solid_prime_bg" withExtension:@"mp4"];
+      AVAsset *asset = [AVAsset assetWithURL:mp4Video];
+      AVPlayerItem *playerItem = [AVPlayerItem playerItemWithAsset:asset];
+
+      AVPlayer *player = [AVPlayer playerWithPlayerItem:playerItem];
+      self.playerLayer.player = player;
+      player.muted = YES;
+      player.allowsExternalPlayback = YES;
+  
+      self.playerLayer.backgroundColor = [UIColor clearColor].CGColor;
+      self.playerLayer.opacity = 0.5;
+      
+      // Add observer to loop video
+      [[NSNotificationCenter defaultCenter] addObserver:self
+                                               selector:@selector(playerItemDidReachEnd:)
+                                                   name:AVPlayerItemDidPlayToEndTimeNotification
+                                                 object:playerItem];
+      
+      [player play];
+
+      [self.videoContainer.layer addSublayer:self.playerLayer];
+}
+
+- (void)playerItemDidReachEnd:(NSNotification *)notification {
+    AVPlayerItem *playerItem = [notification object];
+    [playerItem seekToTime:kCMTimeZero completionHandler:nil];
+    [self.playerLayer.player play];
+}
+
+- (void)setupPip {
+  if ([AVPictureInPictureController isPictureInPictureSupported]) {
+    @try {
+        [[AVAudioSession sharedInstance] setActive:true error:nil];
+        [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback withOptions:AVAudioSessionCategoryOptionMixWithOthers error:nil];
+    }
+    @catch (NSException *exception) {
+        NSLog(@"%@", exception.reason);
+    }
+    
+    self.pipController = [[AVPictureInPictureController alloc] 
+                          initWithPlayerLayer:self.playerLayer];
+    self.pipController.delegate = self;
+    [self.pipController setValue:@(YES) forKey:@"requiresLinearPlayback"];
+    [self.pipController setValue:@(YES) forKey:@"controlsStyle"];
+    if (@available(iOS 14.2, *)) {
+        self.pipController.canStartPictureInPictureAutomaticallyFromInline = YES;
+    }
+    NSLog(@"SETUP PiP");
+//    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleEnterForeground) name:UIApplicationWillEnterForegroundNotification object:nil];
+//    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleEnterBackground) name:UIApplicationDidEnterBackgroundNotification object:nil];
+    [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{
+        [[UIApplication sharedApplication] endBackgroundTask:UIBackgroundTaskInvalid];
+    }];
+  } else {
+    NSLog(@"PiP not supported");
+  }
+}
+
+- (void)pictureInPictureControllerWillStartPictureInPicture:(AVPictureInPictureController *)pictureInPictureController {
+    NSLog(@"PiP will start：%@", UIApplication.sharedApplication.windows);
+    UIWindow *window = [UIApplication sharedApplication].windows.firstObject;
+  if (window) {
+    [window addSubview:self.videoContainer];
+    self.videoContainer.translatesAutoresizingMaskIntoConstraints = NO;
+    [NSLayoutConstraint activateConstraints:@[
+      [self.videoContainer.topAnchor constraintEqualToAnchor:window.topAnchor],
+      [self.videoContainer.bottomAnchor constraintEqualToAnchor:window.bottomAnchor],
+      [self.videoContainer.leadingAnchor constraintEqualToAnchor:window.leadingAnchor],
+      [self.videoContainer.trailingAnchor constraintEqualToAnchor:window.trailingAnchor]
+    ]];
+    NSLog(@"pipController....!");
+  }
+}
+
+- (void)pictureInPictureControllerDidStartPictureInPicture:(AVPictureInPictureController *)pictureInPictureController {
+    NSLog(@"PiP did start：%@", UIApplication.sharedApplication.windows);
+}
+
+- (void)pictureInPictureControllerDidStopPictureInPicture:(AVPictureInPictureController *)pictureInPictureController {
+    [self.view addSubview:self.videoContainer];
+}
+
+- (void)pictureInPictureController:(AVPictureInPictureController *)pictureInPictureController failedToStartPictureInPictureWithError:(NSError *)error {
+    NSLog(@"PiP failed to start：%@", error);
+}
+
+- (void)pictureInPictureControllerWillStopPictureInPicture:(AVPictureInPictureController *)pictureInPictureController {
+    NSLog(@"PiP will stop：%@", UIApplication.sharedApplication.windows);
+}
+
+- (void)startPIP {
+    NSLog(@"START PIP");
+    [self.pipController startPictureInPicture];
+}
+
+- (void)camera:(id<ThingSmartCameraType>)camera thing_didReceiveVideoFrame:(CMSampleBufferRef)sampleBuffer frameInfo:(ThingSmartVideoFrameInfo)frameInfo {
+    CFRetain(sampleBuffer);
+            
+//    [self.videoLayer enqueueSampleBuffer:sampleBuffer];
+    
+    CFRelease(sampleBuffer);
 }
 
 @end

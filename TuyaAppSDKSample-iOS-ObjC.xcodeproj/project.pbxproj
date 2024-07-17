@@ -198,6 +198,7 @@
 		AF5531C525A5620900E13562 /* UserInformationTableViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = AF5531C425A5620900E13562 /* UserInformationTableViewController.m */; };
 		AF5531CA25A564EE00E13562 /* UserInformation.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AF5531C825A564EE00E13562 /* UserInformation.storyboard */; };
 		AF5531D025A58F8A00E13562 /* Alert.m in Sources */ = {isa = PBXBuildFile; fileRef = AF5531CF25A58F8A00E13562 /* Alert.m */; };
+		CED8AF032C46B22D002083FA /* solid_prime_bg.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = CED8AF022C46B22D002083FA /* solid_prime_bg.mp4 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -525,6 +526,7 @@
 		AF5531CE25A58F8A00E13562 /* Alert.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Alert.h; sourceTree = "<group>"; };
 		AF5531CF25A58F8A00E13562 /* Alert.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Alert.m; sourceTree = "<group>"; };
 		C9842C2AD6012B1DDF4F810E /* Pods-TuyaAppSDKSample-iOS-ObjC.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TuyaAppSDKSample-iOS-ObjC.debug.xcconfig"; path = "Target Support Files/Pods-TuyaAppSDKSample-iOS-ObjC/Pods-TuyaAppSDKSample-iOS-ObjC.debug.xcconfig"; sourceTree = "<group>"; };
+		CED8AF022C46B22D002083FA /* solid_prime_bg.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = solid_prime_bg.mp4; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -975,6 +977,7 @@
 		AF54CA4225A4191000FCAC1F = {
 			isa = PBXGroup;
 			children = (
+				CED8AF012C46B20B002083FA /* Resources */,
 				AF54CA8925A4426F00FCAC1F /* PrefixHeader.pch */,
 				AF54CA4D25A4191000FCAC1F /* TuyaAppSDKSample-iOS-ObjC */,
 				AF54CA4C25A4191000FCAC1F /* Products */,
@@ -1081,6 +1084,14 @@
 				67C6522D2897D01800F1D972 /* QRCodeScanerViewController.m */,
 			);
 			path = Helper;
+			sourceTree = "<group>";
+		};
+		CED8AF012C46B20B002083FA /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				CED8AF022C46B22D002083FA /* solid_prime_bg.mp4 */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -1191,6 +1202,7 @@
 				938CBCD329E810DE0086C6F4 /* tp_top_bar_goBack@2x.png in Resources */,
 				938CBCF529E810DE0086C6F4 /* ty_camera_photo_icon@2x.png in Resources */,
 				34FF2CB525AE947200152CA6 /* Main.storyboard in Resources */,
+				CED8AF032C46B22D002083FA /* solid_prime_bg.mp4 in Resources */,
 				938CBCD529E810DE0086C6F4 /* ty_camera_tool_pause_normal@3x.png in Resources */,
 				9A4C4927260B39050000D9EA /* SIGMesh.storyboard in Resources */,
 				9A4C490A260B2A960000D9EA /* BLE.storyboard in Resources */,
@@ -1710,7 +1722,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = BX87DC63NJ;
 				ENABLE_BITCODE = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "$(SRCROOT)/PrefixHeader.pch";
@@ -1720,7 +1732,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "";
+				PRODUCT_BUNDLE_IDENTIFIER = com.hisense.nursery.dev;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -1733,7 +1745,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = BX87DC63NJ;
 				ENABLE_BITCODE = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "$(SRCROOT)/PrefixHeader.pch";
@@ -1743,7 +1755,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "";
+				PRODUCT_BUNDLE_IDENTIFIER = com.hisense.nursery.dev;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
