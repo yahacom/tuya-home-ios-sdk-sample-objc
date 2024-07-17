@@ -62,7 +62,7 @@
 #define kControlCloudDebug       @"CloudDebug"
 #define kControlPiP         @"PIP"
 
-@interface CameraNewViewController ()<CameraBottomSwitchViewDelegate, ThingSmartCameraDelegate, CameraControlNewViewDelegate, ThingSmartCameraDPObserver, UIScrollViewDelegate, AVPictureInPictureControllerDelegate>
+@interface CameraNewViewController ()<CameraBottomSwitchViewDelegate, ThingSmartCameraDelegate, CameraControlNewViewDelegate, ThingSmartCameraDPObserver, UIScrollViewDelegate, AVPictureInPictureControllerDelegate, AVPictureInPictureSampleBufferPlaybackDelegate>
 
 @property (nonatomic, strong) UIView *videoContainer;
 
@@ -181,8 +181,9 @@
     
     [self reloadAllSubviewsLayout];
     
-    [self setupPlayer];
-    [self setupPip];
+    [self initializeDisplayLayer];
+    [self setLayerView:self.videoContainer];
+//    [self setupPip];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -943,41 +944,6 @@
     return _retryButton;
 }
 
-- (void)setupPlayer {
-  self.playerLayer = [AVPlayerLayer playerLayerWithPlayer:nil];
-      self.playerLayer.frame = self.videoContainer.bounds;
-//      self.playerLayer.frame = CGRectMake(0, 0, self.renderView.bounds.size.width, self.renderView.bounds.size.width * 0.54);
-      self.playerLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
-
-      NSURL *mp4Video = [[NSBundle mainBundle] URLForResource:@"solid_prime_bg" withExtension:@"mp4"];
-      AVAsset *asset = [AVAsset assetWithURL:mp4Video];
-      AVPlayerItem *playerItem = [AVPlayerItem playerItemWithAsset:asset];
-
-      AVPlayer *player = [AVPlayer playerWithPlayerItem:playerItem];
-      self.playerLayer.player = player;
-      player.muted = YES;
-      player.allowsExternalPlayback = YES;
-  
-      self.playerLayer.backgroundColor = [UIColor clearColor].CGColor;
-      self.playerLayer.opacity = 0.5;
-      
-      // Add observer to loop video
-      [[NSNotificationCenter defaultCenter] addObserver:self
-                                               selector:@selector(playerItemDidReachEnd:)
-                                                   name:AVPlayerItemDidPlayToEndTimeNotification
-                                                 object:playerItem];
-      
-      [player play];
-
-      [self.videoContainer.layer addSublayer:self.playerLayer];
-}
-
-- (void)playerItemDidReachEnd:(NSNotification *)notification {
-    AVPlayerItem *playerItem = [notification object];
-    [playerItem seekToTime:kCMTimeZero completionHandler:nil];
-    [self.playerLayer.player play];
-}
-
 - (void)setupPip {
   if ([AVPictureInPictureController isPictureInPictureSupported]) {
     @try {
@@ -987,9 +953,13 @@
     @catch (NSException *exception) {
         NSLog(@"%@", exception.reason);
     }
+      
+      
+  AVPictureInPictureControllerContentSource *contentSource = [[AVPictureInPictureControllerContentSource alloc] initWithSampleBufferDisplayLayer:self.videoLayer playbackDelegate:self];
+
     
     self.pipController = [[AVPictureInPictureController alloc] 
-                          initWithPlayerLayer:self.playerLayer];
+                          initWithContentSource:contentSource];
     self.pipController.delegate = self;
     [self.pipController setValue:@(YES) forKey:@"requiresLinearPlayback"];
     [self.pipController setValue:@(YES) forKey:@"controlsStyle"];
@@ -1009,18 +979,6 @@
 
 - (void)pictureInPictureControllerWillStartPictureInPicture:(AVPictureInPictureController *)pictureInPictureController {
     NSLog(@"PiP will start：%@", UIApplication.sharedApplication.windows);
-    UIWindow *window = [UIApplication sharedApplication].windows.firstObject;
-  if (window) {
-    [window addSubview:self.videoContainer];
-    self.videoContainer.translatesAutoresizingMaskIntoConstraints = NO;
-    [NSLayoutConstraint activateConstraints:@[
-      [self.videoContainer.topAnchor constraintEqualToAnchor:window.topAnchor],
-      [self.videoContainer.bottomAnchor constraintEqualToAnchor:window.bottomAnchor],
-      [self.videoContainer.leadingAnchor constraintEqualToAnchor:window.leadingAnchor],
-      [self.videoContainer.trailingAnchor constraintEqualToAnchor:window.trailingAnchor]
-    ]];
-    NSLog(@"pipController....!");
-  }
 }
 
 - (void)pictureInPictureControllerDidStartPictureInPicture:(AVPictureInPictureController *)pictureInPictureController {
@@ -1028,7 +986,6 @@
 }
 
 - (void)pictureInPictureControllerDidStopPictureInPicture:(AVPictureInPictureController *)pictureInPictureController {
-    [self.view addSubview:self.videoContainer];
 }
 
 - (void)pictureInPictureController:(AVPictureInPictureController *)pictureInPictureController failedToStartPictureInPictureWithError:(NSError *)error {
@@ -1044,10 +1001,31 @@
     [self.pipController startPictureInPicture];
 }
 
+-(void) initializeDisplayLayer
+{
+    NSLog(@"Initialize Display Layer");
+    self.videoLayer = [[AVSampleBufferDisplayLayer alloc] init];
+    NSLog(@"Display Layer Initialized");
+}
+
+-(void) setLayerView:(UIView*) view
+{
+    _videoLayer.bounds = view.bounds;
+    _videoLayer.frame = view.frame;
+    _videoLayer.backgroundColor = [UIColor greenColor].CGColor;
+    _videoLayer.position = CGPointMake(CGRectGetMidX(view.bounds), CGRectGetMidY(view.bounds));
+    _videoLayer.videoGravity = AVLayerVideoGravityResizeAspect;
+    
+    // Remove from previous view if exists
+    [self.videoLayer removeFromSuperlayer];
+    
+    [view.layer addSublayer:self.videoLayer];
+}
+
 - (void)camera:(id<ThingSmartCameraType>)camera thing_didReceiveVideoFrame:(CMSampleBufferRef)sampleBuffer frameInfo:(ThingSmartVideoFrameInfo)frameInfo {
     CFRetain(sampleBuffer);
             
-//    [self.videoLayer enqueueSampleBuffer:sampleBuffer];
+    [self.videoLayer enqueueSampleBuffer:sampleBuffer];
     
     CFRelease(sampleBuffer);
 }
